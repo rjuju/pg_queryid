@@ -43,7 +43,9 @@ Once the module is loaded in shared_preload_libraries, it will automatically be
 used to compute query identifiers.
 
 An SQL function to compute query identifier for any given query text is also
-provided if you create the extension.
+provided if you create the extension.  This function can be used to compute
+either this extension's query identifier, or postgres core one if the module
+isn't loaded with shared_preload_libraries.
 
 Example
 -------

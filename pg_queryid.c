@@ -56,6 +56,10 @@ typedef enum pgqKind
 /* Saved hook values in case of unload */
 static post_parse_analyze_hook_type prev_post_parse_analyze_hook = NULL;
 
+/*---- Local variables ----*/
+
+static bool is_spl = false;
+
 /*---- GUC variables ----*/
 
 static bool pgq_use_names;
@@ -94,14 +98,17 @@ _PG_init(void)
 	/*
 	 * We don't want to change the queryid fingerprinting algorithm dynamically
 	 * as it would lead to duplicated entries for extensions like
-	 * pg_stat_statements which rely on the queryid.
+	 * pg_stat_statements which rely on the queryid.  We however still allow to
+	 * dynamically load the module as pg_queryid() SRF can be used to compute
+	 * the queryid of a given query with core implementation.
 	 */
 	if (!process_shared_preload_libraries_in_progress)
 	{
-		elog(ERROR, "This module can only be loaded via shared_preload_libraries");
+		is_spl = false;
 		return;
 	}
 
+	is_spl = true;
 	spl_string = pstrdup(shared_preload_libraries_string);
 	if (!SplitIdentifierString(spl_string, ',', &spl))
 		elog(ERROR, "Could not parse shared_preload_libraries");
@@ -1018,8 +1025,8 @@ pg_queryid(PG_FUNCTION_ARGS)
 	query_string = TextDatumGetCString(PG_GETARG_TEXT_P(0));
 
 	parsetree_list = pg_parse_query(query_string);
-	if (list_length(parsetree_list) == 0)
-		elog(ERROR, "Invalid statement");
+	if (list_length(parsetree_list) != 1)
+		elog(ERROR, "You can only compute the queryid of a single statement");
 
 	parsetree = linitial_node(RawStmt, parsetree_list);
 
@@ -1028,7 +1035,10 @@ pg_queryid(PG_FUNCTION_ARGS)
 	pstate->p_queryEnv = NULL;
 	query = transformTopLevelStmt(pstate, parsetree);
 
-	(void) pgq_JumbleQuery(query, query_string);
+	if (is_spl)
+		(void) pgq_JumbleQuery(query, query_string);
+	else if (compute_query_id)
+		(void) JumbleQuery(query, query_string);
 
 	PG_RETURN_INT64(query->queryId);
 }
