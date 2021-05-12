@@ -15,8 +15,10 @@ CREATE SCHEMA ns1;
 CREATE TABLE ns1.tbl1 AS SELECT 'ns1' AS val;
 CREATE SCHEMA ns2;
 CREATE TABLE ns2.tbl1 AS SELECT 'ns2' AS val;
+CREATE TEMPORARY TABLE tmptbl(val text);
 SET pg_queryid.use_object_names = on;
 SET pg_queryid.ignore_schema = on;
+SET pg_queryid.ignore_temp_tables = on;
 SELECT * FROM pg_stat_statements_reset();
  pg_stat_statements_reset 
 --------------------------
@@ -37,9 +39,33 @@ SELECT * FROM tbl1;
  ns2
 (1 row)
 
+RESET search_path;
+SELECT * FROM tmptbl;
+ val 
+-----
+(0 rows)
+
 SELECT queryid, query, calls FROM public.pg_stat_statements WHERE query LIKE '%tbl%';
        queryid       |       query        | calls 
 ---------------------+--------------------+-------
  8597862845229905026 | SELECT * FROM tbl1 |     2
+(1 row)
+
+SELECT * FROM pg_stat_statements_reset();
+ pg_stat_statements_reset 
+--------------------------
+ 
+(1 row)
+
+SET pg_queryid.ignore_temp_tables = off;
+SELECT * FROM tmptbl;
+ val 
+-----
+(0 rows)
+
+SELECT queryid, query, calls FROM public.pg_stat_statements WHERE query LIKE '%tbl%';
+       queryid       |        query         | calls 
+---------------------+----------------------+-------
+ 1537637248015716743 | SELECT * FROM tmptbl |     1
 (1 row)
 

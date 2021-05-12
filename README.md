@@ -60,13 +60,13 @@ CREATE EXTENSION
 rjuju=# CREATE SCHEMA ns1;
 CREATE SCHEMA
 
-rjuju=# CREATE TABLE ns1.tbl1(id integer);
+rjuju=# CREATE TABLE ns1.tbl1 AS SELECT 'ns1' AS val;
 CREATE TABLE
 
 rjuju=# CREATE SCHEMA ns2;
 CREATE SCHEMA
 
-rjuju=# CREATE TABLE ns2.tbl1(id integer);
+rjuju=# CREATE TABLE ns2.tbl1 AS SELECT 'ns2' AS val;
 CREATE TABLE
 
 rjuju=# SHOW shared_preload_libraries;
@@ -102,36 +102,58 @@ rjuju=# SELECT pg_stat_statements_reset();
 rjuju=# SET search_path TO ns1;
 SET
 
-rjuju=# SELECT count(*) from tbl1;
- count
--------
-     0
+rjuju=# SELECT * from tbl1;
+ val 
+-----
+ ns1
 (1 row)
 
-rjuju=# SELECT public.pg_queryid('SELECT count(*) from tbl1');
+rjuju=# SELECT public.pg_queryid('SELECT * from tbl1');
      pg_queryid
 ---------------------
- 4629593225724429059
+ 8597862845229905026
 (1 row)
 
 rjuju=# SET search_path TO ns2;
 SET
 
-rjuju=# SELECT count(*) from tbl1;
+rjuju=# SELECT * from tbl1;
+ val 
+-----
+ ns2
+(1 row)
+
+rjuju=# SELECT public.pg_queryid('SELECT * from tbl1');
+     pg_queryid
+---------------------
+ 8597862845229905026
+(1 row)
+
+rjuju=# SELECT queryid, query, calls FROM public.pg_stat_statements WHERE query LIKE '%tbl%';
+       queryid       |       query        | calls 
+---------------------+--------------------+-------
+ 8597862845229905026 | SELECT * FROM tbl1 |     2
+(1 row)
+
+rjuju=# RESET search_path;
+RESET
+
+rjuju=# CREATE TEMPORARY TABLE tmptbl(val text);
+CREATE TABLE
+
+rjuju=# SET pg_queryid.ignore_temp_tables = on;
+SET
+
+rjuju=# SELECT COUNT(*) FROM tmptbl;
  count
 -------
      0
 (1 row)
 
-rjuju=# SELECT public.pg_queryid('SELECT count(*) from tbl1');
-     pg_queryid
----------------------
- 4629593225724429059
+rjuju=# SELECT COUNT(*) public.pg_stat_statements WHERE query LIKE '%tmptbl%';
+ count
+-------
+     0
 (1 row)
 
-rjuju=# SELECT queryid, query, calls FROM public.pg_stat_statements WHERE query LIKE '%tbl%';
-       queryid       |           query           | calls
----------------------+---------------------------+-------
- 4629593225724429059 | SELECT count(*) from tbl1 |     2
-(1 row)
 ```
