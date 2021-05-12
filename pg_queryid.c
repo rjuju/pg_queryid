@@ -64,6 +64,7 @@ static bool is_spl = false;
 
 static bool pgq_use_names;
 static bool pgq_ignore_schema;
+static bool pgq_ignore_temp;
 
 /*---- Function declarations ----*/
 
@@ -81,8 +82,8 @@ static uint64 pgq_compute_utility_queryid(const char *str, int query_location, i
 static void pgq_JumbleExpr(JumbleState *jstate, Node *node);
 static JumbleState *pgq_JumbleQuery(Query *query, const char *querytext);
 static void pgq_JumbleOid(JumbleState *jstate, pgqKind kind, Oid oid);
-static void pgq_JumbleQueryInternal(JumbleState *jstate, Query *query);
-static void pgq_JumbleRangeTable(JumbleState *jstate, List *rtable);
+static bool pgq_JumbleQueryInternal(JumbleState *jstate, Query *query);
+static bool pgq_JumbleRangeTable(JumbleState *jstate, List *rtable);
 static void pgq_JumbleRowMarks(JumbleState *jstate, List *rowMarks);
 static void pgq_RecordConstLocation(JumbleState *jstate, int location);
 
@@ -137,6 +138,17 @@ _PG_init(void)
 							"Ignore schema for query fingerprinting.",
 							NULL,
 							&pgq_ignore_schema,
+							false,
+							PGC_SUSET,
+							0,
+							NULL,
+							NULL,
+							NULL);
+
+	DefineCustomBoolVariable("pg_queryid.ignore_temp_tables",
+							"Don't fingerprint queries using temporary relations.",
+							NULL,
+							&pgq_ignore_temp,
 							false,
 							PGC_SUSET,
 							0,
@@ -882,7 +894,7 @@ pgq_JumbleOid(JumbleState *jstate, pgqKind kind, Oid oid)
  * be deduced from child nodes (else we'd just be double-hashing that piece
  * of information).
  */
-static void
+static bool
 pgq_JumbleQueryInternal(JumbleState *jstate, Query *query)
 {
 	Assert(IsA(query, Query));
@@ -906,12 +918,14 @@ pgq_JumbleQueryInternal(JumbleState *jstate, Query *query)
 	pgq_JumbleExpr(jstate, query->limitCount);
 	pgq_JumbleRowMarks(jstate, query->rowMarks);
 	pgq_JumbleExpr(jstate, query->setOperations);
+
+	return false;
 }
 
 /*
  * Jumble a range table
  */
-static void
+static bool
 pgq_JumbleRangeTable(JumbleState *jstate, List *rtable)
 {
 	ListCell   *lc;
@@ -961,6 +975,8 @@ pgq_JumbleRangeTable(JumbleState *jstate, List *rtable)
 				break;
 		}
 	}
+
+	return false;
 }
 
 /*

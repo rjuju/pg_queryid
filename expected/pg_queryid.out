@@ -1,0 +1,45 @@
+SHOW shared_preload_libraries;
+   shared_preload_libraries    
+-------------------------------
+ pg_stat_statements,pg_queryid
+(1 row)
+
+SHOW compute_query_id;
+ compute_query_id 
+------------------
+ off
+(1 row)
+
+CREATE EXTENSION pg_stat_statements;
+CREATE SCHEMA ns1;
+CREATE TABLE ns1.tbl1 AS SELECT 'ns1' AS val;
+CREATE SCHEMA ns2;
+CREATE TABLE ns2.tbl1 AS SELECT 'ns2' AS val;
+SET pg_queryid.use_object_names = on;
+SET pg_queryid.ignore_schema = on;
+SELECT * FROM pg_stat_statements_reset();
+ pg_stat_statements_reset 
+--------------------------
+ 
+(1 row)
+
+SET search_path to ns1;
+SELECT * FROM tbl1;
+ val 
+-----
+ ns1
+(1 row)
+
+SET search_path to ns2;
+SELECT * FROM tbl1;
+ val 
+-----
+ ns2
+(1 row)
+
+SELECT queryid, query, calls FROM public.pg_stat_statements WHERE query LIKE '%tbl%';
+       queryid       |       query        | calls 
+---------------------+--------------------+-------
+ 8597862845229905026 | SELECT * FROM tbl1 |     2
+(1 row)
+
