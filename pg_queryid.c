@@ -8,8 +8,8 @@
  * This program is open source, licensed under the PostgreSQL license.
  * For license terms, see the LICENSE file.
  *
- * Copyright (c) 2008-2021, PostgreSQL Global Development Group
- * Copyright (C) 2021: Julien Rouhaud
+ * Copyright (c) 2008-2022, PostgreSQL Global Development Group
+ * Copyright (C) 2021-2022: Julien Rouhaud
  *
  *-------------------------------------------------------------------------
  */
