@@ -29,6 +29,9 @@ The following configuration options are available:
 - pg_queryid.ignore_schema: Requires use_object_names to be enabled.  Compute a
   query ifentifier based on unqualified object names.
 
+- pg_queryid.ignore_temp_tables: Don't fingerprint queries using temporary
+  relations
+
 /!\ Using object names rather than Oids can add a big overhead. /!\
 
 Note that changing any of those options will have side effects on any extension
