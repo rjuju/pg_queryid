@@ -71,7 +71,6 @@ static bool pgq_ignore_temp;
 /*---- Function declarations ----*/
 
 void		_PG_init(void);
-void		_PG_fini(void);
 
 PG_FUNCTION_INFO_V1(pg_queryid);
 
@@ -165,16 +164,6 @@ _PG_init(void)
 	 */
 	prev_post_parse_analyze_hook = post_parse_analyze_hook;
 	post_parse_analyze_hook = pgq_post_parse_analyze;
-}
-
-/*
- * Module unload callback
- */
-void
-_PG_fini(void)
-{
-	/* Uninstall hooks. */
-	post_parse_analyze_hook = prev_post_parse_analyze_hook;
 }
 
 
